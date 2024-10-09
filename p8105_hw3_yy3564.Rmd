@@ -5,6 +5,90 @@ date: "2024-10-08"
 output: github_document
 ---
 
-```{r}
-print("initial commit")
+# Problem 2
+
+```{r, message=FALSE}
+library(tidyverse)
 ```
+```{r}
+demographic = 
+  read_csv("data/nhanes_covar.csv", skip = 4, na = c("NA","",".")) |>
+  janitor::clean_names() |>
+  drop_na(sex:education) |>
+  filter(age>21) |>
+  mutate(education = factor(education, levels = c("1", "2", "3"), labels = c("Less than high school", "High school equivalent", "More than high school"), ordered = TRUE)) |>
+  mutate(sex = factor(sex, levels=c("1", "2"), labels = c("male", "female"), ordered = TRUE))
+demographic
+```
+
+
+```{r}
+accelerometer = 
+  read_csv("data/nhanes_accel.csv", na = c("NA","",".")) |>
+  janitor::clean_names() |>
+  drop_na()|>
+  pivot_longer(min1:min1440, names_to = "minute", values_to = "mims_value")
+accelerometer
+```
+```{r}
+final_df = full_join(demographic,accelerometer) |>
+  drop_na() |>
+  mutate(minute = str_remove(minute, "[^0-9]+"))
+final_df
+```
+```{r}
+demographic |>
+  group_by(sex,education) |>
+  summarise(num_obs=n())
+```
+```{r}
+ggplot(demographic,aes(x = education, y = age)) +
+  geom_violin(aes(fill = sex), alpha = 0.5) +
+  labs(title = "Age Distributions by Sex and Education Level",
+       x = "Education Level",
+       y = "Age")
+```
+```{r}
+activity_df = final_df |>
+  group_by(sex,minute,education,age) |>
+  summarise(total_value = sum(mims_value, na.rm = TRUE))
+activity_df
+```
+
+```{r}
+ggplot(activity_df, aes(x = age, y = total_value, color = sex)) +
+  geom_point(alpha = 0.5) +  # Add scatter points with transparency
+  geom_smooth(method = "loess", se = FALSE) +  # Add a smooth trend line (using LOESS)
+  facet_grid(~ education) +  # Separate panels by education level
+  labs(title = "Total Activity vs Age by Gender and Education Level",
+       x = "Age",
+       y = "Total Activity",
+       color = "Sex") +  # Label axes and color legend
+  theme_minimal()  # Use a minimal theme for a clean look
+```
+
+
+```{r}
+activity_df2 = final_df |>
+  mutate(minute = as.numeric(minute)) |>
+  mutate(hour = floor((minute - 1) / 60) + 1) |>
+  group_by(education,sex, hour)|>
+  summarise(total_value = sum(mims_value, na.rm = TRUE))
+activity_df2
+```
+```{r}
+ggplot(activity_df2, aes(x = hour, y = total_value, color = sex)) +
+  geom_point(alpha = .4) +  # Add lines for activity over time
+  geom_smooth(method = "loess", se = FALSE) +  # Add smooth trends with loess
+  facet_grid(~ education) +  # Create separate panels for each education level
+  labs(title = "24-Hour Activity Time Course by Education Level",
+       x = "Time of Day (in hour)",
+       y = "Mean Activity",
+       color = "sex") +  # Label axes and legend
+  theme_minimal() +  # Use a minimal theme for a clean plot
+  theme(panel.spacing = unit(2, "lines"))
+```
+
+
+
+
