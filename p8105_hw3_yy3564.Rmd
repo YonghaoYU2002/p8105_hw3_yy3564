@@ -1,7 +1,7 @@
 ---
 title: "p8105_hw3_yy3564"
 author: "Yonghao YU"
-date: "2024-10-08"
+date: "2024-10-10"
 output: github_document
 ---
 
@@ -89,6 +89,107 @@ ggplot(activity_df2, aes(x = hour, y = total_value, color = sex)) +
   theme(panel.spacing = unit(2, "lines"))
 ```
 
+```{r}
+Jan20 = 
+  read_csv("data/Jan 2020 Citi.csv", na = c("NA","",".")) |>
+  janitor::clean_names() |>
+  mutate(year = 2020, month = "January")
+Jan20
+```
 
+```{r}
+July20 = 
+  read_csv("data/July 2020 Citi.csv", na = c("NA","",".")) |>
+  janitor::clean_names() |>
+  mutate(year = 2020, month = "July")
+July20
+```
+
+```{r}
+Jan24 = 
+  read_csv("data/Jan 2024 Citi.csv", na = c("NA","",".")) |>
+  janitor::clean_names() |>
+  mutate(year = 2024, month = "January")
+Jan24
+```
+
+```{r}
+July24 = 
+  read_csv("data/July 2024 Citi.csv", na = c("NA","",".")) |>
+  janitor::clean_names() |>
+  mutate(year = 2024, month = "July")
+July24
+```
+```{r}
+# Combine all data then clean any missing data
+all_data =
+  bind_rows(Jan20, July20, Jan24, July24) |>
+  drop_na()
+all_data
+```
+
+```{r}
+# Step 2: Produce a reader-friendly table showing total number of rides by year and month
+total_rides = 
+  all_data |>
+  group_by(year, month, member_casual) |>
+  summarise(total_rides = n()) |>
+  arrange(year, month, member_casual)
+total_rides
+```
+```{r}
+july_2024_data = all_data |>
+  filter(year == 2024, month == "July")
+
+popular_stations = july_2024_data |>
+  group_by(start_station_name) |>
+  summarise(ride_count = n()) |>
+  arrange(desc(ride_count)) |>
+  head(5)
+
+popular_stations
+```
+
+```{r}
+# Step 4: Investigate the effects of day of week, month, and year on median ride duration
+median_duration <- all_data |>
+  group_by(weekdays, month, year) |>
+  summarise(median_duration = median(duration)) |>
+  mutate(weekdays = case_when(
+    weekdays == "Monday" ~ 1,
+    weekdays == "Tuesday" ~ 2,
+    weekdays == "Wednesday" ~ 3,
+    weekdays == "Thursday" ~ 4,
+    weekdays == "Friday" ~ 5,
+    weekdays == "Saturday" ~ 6,
+    weekdays == "Sunday" ~ 7
+  ))
+
+# Plot the median ride duration
+ggplot(median_duration, aes(x = weekdays, y = median_duration, color = month, group = interaction(year, month))) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ year) +
+  labs(title = "Median Ride Duration by Day of Week, Month, and Year", 
+       x = "Day of Week", 
+       y = "Median Ride Duration (Minutes)") +
+  theme_minimal() +
+  theme(panel.spacing = unit(3, "lines"))
+```
+
+```{r}
+# Step 5: Investigate the impact of month, membership status, and bike type on ride duration in 2024
+data_2024 = all_data |>
+  filter(year == 2024)
+
+# Plot distribution of ride duration based on bike type, month, and membership status
+ggplot(data_2024, aes(x = month, y = duration, fill = rideable_type)) +
+  geom_boxplot() +
+  facet_wrap(~ member_casual) +
+  labs(title = "Ride Duration Distribution in 2024 by Month and Bike Type", 
+       x = "Month", 
+       y = "Ride Duration (Minutes)") +
+  theme_minimal()
+```
 
 
