@@ -1,7 +1,7 @@
 ---
 title: "p8105_hw3_yy3564"
 author: "Yonghao YU"
-date: "2024-10-10"
+date: "2024-10-15"
 output: github_document
 ---
 
@@ -10,6 +10,7 @@ output: github_document
 ```{r, message=FALSE}
 library(tidyverse)
 ```
+### First, I load, tidy, merge, and organize the datasets. My final dataset includes all originally observed variables; excludes participants less than 21 years of age, and those with missing demographic data; and encode data with reasonable variable classes
 ```{r}
 demographic = 
   read_csv("data/nhanes_covar.csv", skip = 4, na = c("NA","",".")) |>
@@ -36,11 +37,13 @@ final_df = full_join(demographic,accelerometer) |>
   mutate(minute = str_remove(minute, "[^0-9]+"))
 final_df
 ```
+### Then I produce a reader-friendly table for the number of men and women in each education category
 ```{r}
 demographic |>
   group_by(sex,education) |>
   summarise(num_obs=n())
 ```
+### After that, I create a visualization of the age distributions for men and women in each education category.
 ```{r}
 ggplot(demographic,aes(x = education, y = age)) +
   geom_violin(aes(fill = sex), alpha = 0.5) +
@@ -48,26 +51,35 @@ ggplot(demographic,aes(x = education, y = age)) +
        x = "Education Level",
        y = "Age")
 ```
+
+### Some comments for this visualization:
+This violin plot shows age distributions by education level and sex. The width of each violin indicates the density of individuals at different ages. For "Less than high school," male and female distributions are fairly balanced, while "More than high school" shows a wider spread, especially for females. The plot highlights differences in age concentration across education levels, with "More than high school" having the broadest age range. The color contrast between males (purple) and females (yellow) is clear.
+
+### Then I use my tidied dataset, and aggregate across minutes to create a total activity variable for each participant.
 ```{r}
 activity_df = final_df |>
   group_by(sex,minute,education,age) |>
   summarise(total_value = sum(mims_value, na.rm = TRUE))
 activity_df
 ```
-
+### Then I plot these total activities (y-axis) against age (x-axis) to compare men to women who have separate panels for each education level. After that I include a trend line or a smooth to illustrate differences.
 ```{r}
 ggplot(activity_df, aes(x = age, y = total_value, color = sex)) +
-  geom_point(alpha = 0.5) +  # Add scatter points with transparency
-  geom_smooth(method = "loess", se = FALSE) +  # Add a smooth trend line (using LOESS)
-  facet_grid(~ education) +  # Separate panels by education level
+  geom_point(alpha = 0.5) +  
+  geom_smooth(method = "loess", se = FALSE) + 
+  facet_grid(~ education) + 
   labs(title = "Total Activity vs Age by Gender and Education Level",
        x = "Age",
        y = "Total Activity",
-       color = "Sex") +  # Label axes and color legend
-  theme_minimal()  # Use a minimal theme for a clean look
+       color = "Sex") +  
+  theme_minimal() 
 ```
 
+### Then I make some comments for this plot: 
+This scatter plot shows total activity by age, gender, and education level. Males (purple) generally show higher activity levels than females (yellow), especially after age 40. The "More than high school" group has the widest activity range, with many high-activity outliers, particularly in older age groups. In contrast, the "Less than high school" and "High school equivalent" groups have more consistent and lower activity levels. The trend lines indicate that activity declines with age, though some individuals, especially with higher education, maintain higher activity levels in older age brackets. This visualization effectively highlights these patterns.
 
+
+### Then I create a dataframe split the time into hour based as following!
 ```{r}
 activity_df2 = final_df |>
   mutate(minute = as.numeric(minute)) |>
@@ -76,18 +88,26 @@ activity_df2 = final_df |>
   summarise(total_value = sum(mims_value, na.rm = TRUE))
 activity_df2
 ```
+### After that I make a three-panel plot that shows the 24-hour activity time courses for each education level and use color to indicate sex.
 ```{r}
 ggplot(activity_df2, aes(x = hour, y = total_value, color = sex)) +
-  geom_point(alpha = .4) +  # Add lines for activity over time
-  geom_smooth(method = "loess", se = FALSE) +  # Add smooth trends with loess
-  facet_grid(~ education) +  # Create separate panels for each education level
+  geom_point(alpha = .4) +
+  geom_smooth(method = "loess", se = FALSE) + 
+  facet_grid(~ education) +  
   labs(title = "24-Hour Activity Time Course by Education Level",
        x = "Time of Day (in hour)",
        y = "Mean Activity",
-       color = "sex") +  # Label axes and legend
-  theme_minimal() +  # Use a minimal theme for a clean plot
+       color = "sex") +  
+  theme_minimal() + 
   theme(panel.spacing = unit(2, "lines"))
 ```
+
+### Then I make some comments for this plot:
+This scatter and line plot shows the 24-hour activity patterns by education level and sex. Both males (purple) and females (yellow) exhibit similar daily activity curves, peaking around 10-12 hours (midday). In all education groups, females consistently have higher mean activity levels, particularly in the "More than high school" group, where the difference is most pronounced. The "Less than high school" group has the lowest overall activity levels, while "More than high school" shows the highest. Activity starts low in the early hours, increases sharply until midday, and declines after. This plot effectively highlights the impact of education on daily activity patterns.
+
+# Problem 3
+
+### First, I import, clean, and tidy these data, and describe the resulting dataset.
 
 ```{r}
 Jan20 = 
@@ -120,16 +140,19 @@ July24 =
   mutate(year = 2024, month = "July")
 July24
 ```
+Combine all data and then clean any missing data
 ```{r}
-# Combine all data then clean any missing data
 all_data =
   bind_rows(Jan20, July20, Jan24, July24) |>
   drop_na()
 all_data
 ```
 
+### Then comment on the resulting dataset:
+The resulting dataset has 99253 rows and 9 columns, describing the data on rides taken on the NYC Citi Bike system!
+
+### Then I produce a reader-friendly table showing total number of rides by year and month separating casual riders and Citi Bike members
 ```{r}
-# Step 2: Produce a reader-friendly table showing total number of rides by year and month
 total_rides = 
   all_data |>
   group_by(year, month, member_casual) |>
@@ -137,6 +160,11 @@ total_rides =
   arrange(year, month, member_casual)
 total_rides
 ```
+
+### Comment on this dataset:
+The dataset has 8 rows and 4 columns showing total number of rides by year and month separating casual riders and Citi Bike members, as we can see in the dataframe, member have much more total rides compared to casual no matter how the other variable (year, month) changes.
+
+### Then I make a table showing the 5 most popular starting stations for July 2024 which includes the number of rides originating from these stations.
 ```{r}
 july_2024_data = all_data |>
   filter(year == 2024, month == "July")
@@ -150,8 +178,9 @@ popular_stations = july_2024_data |>
 popular_stations
 ```
 
+### Then I make a plot to investigate the effects of day of the week, month, and year on median ride duration which includes one or more panels, but should facilitate comparison across all variables of interest. 
+
 ```{r}
-# Step 4: Investigate the effects of day of week, month, and year on median ride duration
 median_duration <- all_data |>
   group_by(weekdays, month, year) |>
   summarise(median_duration = median(duration)) |>
@@ -165,7 +194,6 @@ median_duration <- all_data |>
     weekdays == "Sunday" ~ 7
   ))
 
-# Plot the median ride duration
 ggplot(median_duration, aes(x = weekdays, y = median_duration, color = month, group = interaction(year, month))) +
   geom_line() +
   geom_point() +
@@ -177,12 +205,15 @@ ggplot(median_duration, aes(x = weekdays, y = median_duration, color = month, gr
   theme(panel.spacing = unit(3, "lines"))
 ```
 
+### Comment on this plot:
+This plot compares median ride duration by day of the week for two years (2020 and 2024) and two months (January and July). In both years, July (blue) has significantly longer median ride durations than January (red). In 2020, ride durations peak on the seventh day (Sunday), especially in July, where it surpasses 15 minutes. In 2024, a similar pattern occurs, with July showing higher values throughout the week, peaking midweek. January in both years shows much lower and more stable ride durations, around 7.5 to 10 minutes. This suggests seasonal and yearly variations in ride durations.
+
+
+### Finally, for data in 2024, I make a figure that shows the impact of month, membership status, and bike type on the distribution of ride duration. 
 ```{r}
-# Step 5: Investigate the impact of month, membership status, and bike type on ride duration in 2024
 data_2024 = all_data |>
   filter(year == 2024)
 
-# Plot distribution of ride duration based on bike type, month, and membership status
 ggplot(data_2024, aes(x = month, y = duration, fill = rideable_type)) +
   geom_boxplot() +
   facet_wrap(~ member_casual) +
@@ -192,4 +223,6 @@ ggplot(data_2024, aes(x = month, y = duration, fill = rideable_type)) +
   theme_minimal()
 ```
 
+### Comment on this plot:
+This box plot shows the distribution of ride durations in 2024 by month (January and July), bike type (classic and electric), and rider type (casual and member). Casual riders have longer and more varied ride durations than members, especially in July, where there are many outliers above 150 minutes. Electric bikes (blue) generally have slightly longer median ride durations compared to classic bikes (red) for both rider types and months. The difference in ride duration between months is more pronounced for casual riders, especially in July. Members tend to have more consistent, shorter ride durations across both months and bike types.
 
